@@ -1,0 +1,942 @@
+{
+  "name": "Autonomous Lead Follow-up Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        416
+      ],
+      "id": "12594dd0-2fb9-47cc-bdc9-fbb9cf8af84c",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.name + \" | \" + $json.email + \" | \" + $json.company + \" | \" + ($json.message || \"Not provided\") + \" | \" + ($json.budget || \"Not provided\") + \" | \" + $json.status + \" | Verification status: \" + $json.verification_status + \" | Verification reason: \" + $json.verification_reason }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an autonomous lead follow-up decision agent working with existing HubSpot contacts.\n\nEvaluate the contact details provided in the user message.\n\nRules:\n1. Assign a lead score from 0 to 100 based only on available evidence.\n2. Classify priority as High, Medium, or Low.\n3. Decide whether follow-up is recommended.\n4. Explain the decision using evidence from the contact information.\n5. Recommend one practical next action.\n6. Identify missing information without inventing details.\n7. Do not assume an existing contact is an interested buyer.\n8. If the message and budget are missing, do not assume business or purchase intent.\n9. Set recommended_action_type to exactly one of: \"Send Follow-up\", \"Request Information\", \"No Action\", or \"Review Contact\".\n10. If follow-up is not recommended, do not recommend sending a follow-up email. Recommend reviewing the contact or waiting for more information instead.\n11. If follow-up is recommended, provide a short, professional, personalized email draft.\n12. Never send emails, modify HubSpot records, or perform external actions.\n\nReturn the result using the exact JSON structure required by the connected Structured Output Parser.\n\n13. Consider verification_status and verification_reason when making a recommendation. If required contact information is missing or there is a significant data inconsistency, recommend \"Review Contact\". Do not claim that a contact's identity is verified merely because their name and email are present."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        880,
+        416
+      ],
+      "id": "fa457b32-b456-4d4c-9a14-7b7e3e2ca09f",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        640
+      ],
+      "id": "2de97ca9-41e1-41ae-a3db-338e8aee23c0",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"lead_score\": 45,\n  \"priority\": \"Medium\",\n  \"follow_up_recommended\": true,\n  \"reasoning\": \"The contact exists in HubSpot, but more information is needed to assess their business interest.\",\n  \"next_action\": \"Review the contact history to identify any genuine business inquiry.\",\n  \"missing_information\": [\n    \"Original inquiry message\",\n    \"Budget\",\n    \"Business requirements\"\n  ],\n  \"email_subject\": \"Following Up\",\n  \"email_draft\": \"Hello John, I wanted to check whether you need any assistance with your business requirements. Please let me know if I can help.\",\n  \"recommended_action_type\": \"Review Contact\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        816,
+        640
+      ],
+      "id": "030f94ff-ee48-43e5-8c16-5f4641c48d80",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8abe9d1b-decc-4862-9301-b9d3d7b6a17b",
+              "leftValue": "={{ $json.output.follow_up_recommended }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1232,
+        416
+      ],
+      "id": "524c48cd-a32a-4291-92a1-9f53874c0e58",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c4a24d07-c25a-4717-a041-349dc4584c42",
+              "name": "lead_score",
+              "value": "={{ $json.output.lead_score }}",
+              "type": "number"
+            },
+            {
+              "id": "1ead09a1-b1a0-4563-bea5-60add628ff63",
+              "name": "priority",
+              "value": "={{ $json.output.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "0d623047-6adc-4bd5-9557-892aa29345c6",
+              "name": "email_subject",
+              "value": "={{ $json.output.email_subject }}",
+              "type": "string"
+            },
+            {
+              "id": "8dc7ff26-bfac-447e-ba36-8d8f469c10f8",
+              "name": "email_draft",
+              "value": "={{ $json.output.email_draft }}",
+              "type": "string"
+            },
+            {
+              "id": "3e149074-428d-4301-9cfc-39a3923d8b7a",
+              "name": "recommended_action_type",
+              "value": "={{ $json.output.recommended_action_type }}",
+              "type": "string"
+            },
+            {
+              "id": "3ec3122d-d019-4d9d-b18a-2b3e7159d9af",
+              "name": "missing_information",
+              "value": "={{ $json.output.missing_information }}",
+              "type": "array"
+            },
+            {
+              "id": "83ddeda5-9662-4d54-86f3-d49ce9b975d6",
+              "name": "email",
+              "value": "={{ $('Normalize HubSpot Contacts').item.json.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1456,
+        320
+      ],
+      "id": "c6c8a97c-3769-433b-a0d7-f47ade27c5e6",
+      "name": "Prepare Follow-up Draft"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "369cf705-ac3e-44d3-a085-d9174e219709",
+              "name": "decision",
+              "value": "={{ \"Follow-up recommended\" }}",
+              "type": "string"
+            },
+            {
+              "id": "ad001dec-ae5f-43ec-9f0a-c53973ca6b6c",
+              "name": "lead_score",
+              "value": "={{ $json.lead_score }}",
+              "type": "number"
+            },
+            {
+              "id": "7aabb0cd-62d1-4016-9bf7-171b8257ed68",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "463e153f-bde3-485b-bd30-b3dcadf8de36",
+              "name": "email_subject",
+              "value": "={{ $json.email_subject }}",
+              "type": "string"
+            },
+            {
+              "id": "cd0ece43-115d-4244-80c7-3af6c7a2b054",
+              "name": "email_draft",
+              "value": "={{ $json.email_draft }}",
+              "type": "string"
+            },
+            {
+              "id": "470e11b7-29d6-4e02-bf5e-b005bb046583",
+              "name": "recommended_action_type",
+              "value": "={{ $json.recommended_action_type }}",
+              "type": "string"
+            },
+            {
+              "id": "b62fbd19-44cb-4088-a9e0-7406613b6379",
+              "name": "missing_information",
+              "value": "={{ $json.missing_information }}",
+              "type": "array"
+            },
+            {
+              "id": "1ae4b63a-2204-48dd-b645-acf143edb3b7",
+              "name": "email",
+              "value": "={{ $('Normalize HubSpot Contacts').item.json.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        320
+      ],
+      "id": "49cac774-ab5c-4400-ab92-5443b0b4dd66",
+      "name": "Lead Decision Report"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "59bc68ae-f631-4125-ba16-111212261738",
+              "name": "decision",
+              "value": "={{ \"Follow-up not recommended\" }}",
+              "type": "string"
+            },
+            {
+              "id": "6c276877-2fec-440b-bf7a-b1ff1a51284b",
+              "name": "lead_score",
+              "value": "={{ $json.output.lead_score }}",
+              "type": "number"
+            },
+            {
+              "id": "133dd725-019a-4ede-8931-17fe0a06bb63",
+              "name": "priority",
+              "value": "={{ $json.output.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "0a696f9a-e8b1-4589-bcf2-60de3871b526",
+              "name": "reasoning",
+              "value": "={{ $json.output.reasoning }}",
+              "type": "string"
+            },
+            {
+              "id": "20b5ed2b-719f-4ba9-aade-9247724125db",
+              "name": "recommended_action_type",
+              "value": "={{ $json.output.recommended_action_type }}",
+              "type": "string"
+            },
+            {
+              "id": "2d881620-2f06-4747-b579-aff3f7418996",
+              "name": "missing_information",
+              "value": "={{ $json.output.missing_information }}",
+              "type": "array"
+            },
+            {
+              "id": "e8869774-e672-4f1e-967b-00aed40305fc",
+              "name": "email",
+              "value": "={{ $('Normalize HubSpot Contacts').item.json.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        512
+      ],
+      "id": "ddd16469-d565-4235-a194-bcf8869ef20e",
+      "name": "Skipped Lead Report"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1904,
+        416
+      ],
+      "id": "1c9dd4d6-7e00-49ae-87c9-142098d2c65c",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst leads = $input.all().map(item => item.json);\n\n// Rank leads from highest to lowest score\nleads.sort((a, b) => Number(b.lead_score) - Number(a.lead_score));\n\nconst followUpCount = leads.filter(\n  lead => lead.decision === \"Follow-up recommended\"\n).length;\n\nconst skippedCount = leads.length - followUpCount;\n\nreturn [\n  {\n    json: {\n      total_leads: leads.length,\n      follow_up_count: followUpCount,\n      skipped_count: skippedCount,\n      ranked_leads: leads\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        416
+      ],
+      "id": "5fb67ee6-9c33-4efc-9c37-ca3276f59ad7",
+      "name": "Rank Leads and Summarize"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "operation": "getAll",
+        "limit": 4,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        416
+      ],
+      "id": "0ddc6aea-c2c1-47bb-b0b0-3390b7d38aae",
+      "name": "Get many contacts"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8c2520f0-e801-4e2f-ac46-9626da5b4d50",
+              "name": "name",
+              "value": "={{ [$json.properties.firstname?.value, $json.properties.lastname?.value].filter(Boolean).join(' ') }}",
+              "type": "string"
+            },
+            {
+              "id": "7ff67a1b-4fd6-4014-93a7-c4ab538ee75f",
+              "name": "email",
+              "value": "={{ $json['identity-profiles']?.[0]?.identities?.find(i => i.type === 'EMAIL' && i['is-primary'])?.value || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "1b5a68b1-646c-4f2f-ab10-34356c07bb0e",
+              "name": "company",
+              "value": "={{ $json.properties.company?.value || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "18140551-d7cb-434d-aa16-bb3eb6e377fa",
+              "name": "message",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "5f9c7de3-e8e7-4375-81bb-194e5b6b3912",
+              "name": "budget",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "6a3aede0-2854-4f90-9cf6-a9f01cca962e",
+              "name": "status",
+              "value": "={{ 'Existing HubSpot Contact' }}",
+              "type": "string"
+            },
+            {
+              "id": "fa16452c-2d89-4030-8d14-934cb5241235",
+              "name": "hubspot_contact_id",
+              "value": "={{ String($json.vid) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        416
+      ],
+      "id": "80bbe895-ad5b-456e-a8c1-2cfd7b5d8766",
+      "name": "Normalize HubSpot Contacts"
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $input.first().json;\nconst leads = summary.ranked_leads || [];\n\nreturn leads.map(lead => ({\n  json: {\n    ...lead\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        416
+      ],
+      "id": "848ebd84-ce07-4f61-ba00-4cd6c1081653",
+      "name": "Prepare Individual Lead Decisions"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.recommended_action_type }}",
+                    "rightValue": "Send Follow-up",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "94a92b3e-2ea6-4469-804a-ff98a44e1d29"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3bededdf-4934-408d-a79e-ee447775802d",
+                    "leftValue": "={{ $json.recommended_action_type }}",
+                    "rightValue": "Request Information",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "570d6e5d-8df1-47b9-bcfc-a195e1a05276",
+                    "leftValue": "={{ $json.recommended_action_type }}",
+                    "rightValue": "No Action",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "04140b0a-5bd6-432d-9657-de4a7bd2d721",
+                    "leftValue": "={{ $json.recommended_action_type }}",
+                    "rightValue": "Review Contact",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2576,
+        384
+      ],
+      "id": "1c2a5807-717e-4655-ba5c-1b8013e55933",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a2d45753-714e-4575-b9a6-bf1e21c3acfe",
+              "name": "action",
+              "value": "Send Follow-up",
+              "type": "string"
+            },
+            {
+              "id": "fa3f8579-5002-48e4-a8b6-c77f4705ea66",
+              "name": "lead_score",
+              "value": "={{ $json.lead_score }}",
+              "type": "number"
+            },
+            {
+              "id": "140ac848-7864-43a8-b7a3-99a6ee3a4efd",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "82f536b0-69a7-4a7f-8a4e-0e5d7d092714",
+              "name": "email_subject",
+              "value": "={{ $json.email_subject }}",
+              "type": "string"
+            },
+            {
+              "id": "5e802755-e607-4640-999c-dba47bfbac19",
+              "name": "email_draft",
+              "value": "={{ $json.email_draft }}",
+              "type": "string"
+            },
+            {
+              "id": "aa578ef5-c250-422b-a320-d98ef98814ba",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2800,
+        128
+      ],
+      "id": "82521744-3278-495d-abab-43471261d9df",
+      "name": "Send Follow-up Report"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a2d45753-714e-4575-b9a6-bf1e21c3acfe",
+              "name": "action",
+              "value": "Request Information",
+              "type": "string"
+            },
+            {
+              "id": "fa3f8579-5002-48e4-a8b6-c77f4705ea66",
+              "name": "lead_score",
+              "value": "={{ $json.lead_score }}",
+              "type": "number"
+            },
+            {
+              "id": "140ac848-7864-43a8-b7a3-99a6ee3a4efd",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "82f536b0-69a7-4a7f-8a4e-0e5d7d092714",
+              "name": "reasoning",
+              "value": "={{ $json.reasoning }}",
+              "type": "string"
+            },
+            {
+              "id": "5e802755-e607-4640-999c-dba47bfbac19",
+              "name": "missing_information",
+              "value": "={{ $json.missing_information }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2800,
+        320
+      ],
+      "id": "683a5439-2f39-40f6-86cf-65f94a77263d",
+      "name": "Request Information Report"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a2d45753-714e-4575-b9a6-bf1e21c3acfe",
+              "name": "action",
+              "value": "No Action",
+              "type": "string"
+            },
+            {
+              "id": "fa3f8579-5002-48e4-a8b6-c77f4705ea66",
+              "name": "lead_score",
+              "value": "={{ $json.lead_score }}",
+              "type": "number"
+            },
+            {
+              "id": "140ac848-7864-43a8-b7a3-99a6ee3a4efd",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "82f536b0-69a7-4a7f-8a4e-0e5d7d092714",
+              "name": "reasoning",
+              "value": "={{ $json.reasoning }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2800,
+        512
+      ],
+      "id": "2268bf19-f53c-4fae-834d-6bd515ac23d4",
+      "name": "No Action Report"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a2d45753-714e-4575-b9a6-bf1e21c3acfe",
+              "name": "action",
+              "value": "Review Contact",
+              "type": "string"
+            },
+            {
+              "id": "fa3f8579-5002-48e4-a8b6-c77f4705ea66",
+              "name": "lead_score",
+              "value": "={{ $json.lead_score }}",
+              "type": "number"
+            },
+            {
+              "id": "140ac848-7864-43a8-b7a3-99a6ee3a4efd",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "82f536b0-69a7-4a7f-8a4e-0e5d7d092714",
+              "name": "reasoning",
+              "value": "={{ $json.reasoning }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2800,
+        704
+      ],
+      "id": "54a8b0eb-821e-48f4-ab20-6c8e8c10f004",
+      "name": "Review Contact Report"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1c2daca2-5314-4523-9fd0-e01b3c9db1a8",
+              "name": "verification_status",
+              "value": "Needs Review",
+              "type": "string"
+            },
+            {
+              "id": "3ba3a015-cad0-4fb0-b9fa-d1e524325189",
+              "name": "verification_reason",
+              "value": "={{ !$json.name || !$json.email ? 'Missing name or email' : 'Name and email are present; identity is not yet verified' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        416
+      ],
+      "id": "1a818676-4b88-4af8-b280-79842790fa70",
+      "name": "Verify Contact Data"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.email_subject }}",
+        "emailType": "text",
+        "message": "={{ $json.email_draft.replace(/\\\\n/g, '\\n') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3008,
+        128
+      ],
+      "id": "3dbb2b47-9048-4074-83f1-2eb6074abc52",
+      "name": "Send a message"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Prepare Follow-up Draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skipped Lead Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Follow-up Draft": {
+      "main": [
+        [
+          {
+            "node": "Lead Decision Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Decision Report": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skipped Lead Report": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Rank Leads and Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many contacts": {
+      "main": [
+        [
+          {
+            "node": "Normalize HubSpot Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize HubSpot Contacts": {
+      "main": [
+        [
+          {
+            "node": "Verify Contact Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank Leads and Summarize": {
+      "main": [
+        [
+          {
+            "node": "Prepare Individual Lead Decisions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Individual Lead Decisions": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Request Information Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Action Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Review Contact Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Contact Data": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow-up Report": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}
