@@ -42,3 +42,5 @@ The Gmail node sends real emails through the Send Follow-up branch. Review and t
 
 ## Project Purpose
 To demonstrate how AI agents can support lead evaluation, prioritization, decision-making, and follow-up automation within a CRM workflow.
+
+- [Autonomous HubSpot Lead Follow-up Agent](./04-autonomous-lead-follow-up-agent/) – An AI-powered workflow that evaluates, scores, prioritizes, and recommends follow-up actions for HubSpot leads.
